@@ -7,20 +7,20 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    # 1. Скачиваем ваши файлы кода из репозитория
+    # 1. Скачиваем ваши файлы кода (ContentView.swift и MyApp.swift)
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Магия: создаем структуру проекта SwiftPM прямо в облаке
+    # 2. Создаем правильную структуру проекта для компилятора
     - name: Prepare Swift Package Project
       run: |
         mkdir -p MyCustomApp/Sources
         mv ContentView.swift MyCustomApp/Sources/
         mv MyApp.swift MyCustomApp/Sources/
         
-        # Создаем файл манифеста, чтобы macOS поняла, как это собирать
+        # Создаем файл манифеста с ИСПРАВЛЕННОЙ версией инструментов Swift
         cat << 'EOF' > MyCustomApp/Package.swift
-        // swift-interface-format-version: 1.0
+        // swift-tools-version: 5.9
         import PackageDescription
 
         let package = Package(
@@ -31,21 +31,21 @@ jobs:
         )
         EOF
 
-    # 3. Компилируем код в готовое приложение для Айфона
+    # 3. Компилируем код под реальный процессор iPhone (arm64)
     - name: Build iOS Executable
       run: |
         cd MyCustomApp
-        # Собираем код под реальный процессор iPhone (arm64)
         swift build -c release --triple arm64-apple-ios15.0
 
-    # 4. Упаковываем результат в правильный формат .ipa
-    - name: Package into IPA
+    # 4. Собираем приложение в папку и создаем файл настроек Info.plist
+    - name: Package into App Folder
       run: |
         mkdir -p Payload/MyCustomApp.app
-        # Копируем скомпилированный файл в папку приложения
+        
+        # Копируем скомпилированный бинарник программы
         cp MyCustomApp/.build/plugins/Outputs/MyCustomApp Payload/MyCustomApp.app/MyCustomApp
         
-        # Создаем обязательный файл настроек Info.plist, чтобы Айфон понял, что это за программа
+        # Создаем обязательный файл описания приложения
         cat << 'EOF' > Payload/MyCustomApp.app/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
         <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
@@ -69,10 +69,10 @@ jobs:
         </plist>
         EOF
         
-        # Архивируем всё это в .ipa
+        # Архивируем всё в формат .ipa для Айфона
         zip -r MyFirstApp.ipa Payload
 
-    # 5. Отдаем готовый файл вам
+    # 5. Выкладываем готовый файл, чтобы вы могли его скачать
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
