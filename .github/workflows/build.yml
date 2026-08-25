@@ -1,26 +1,35 @@
 name: hayrx
 on:
-  push:
-    branches: [ "main" ] # Запускать сборку при каждом обновлении кода
-  workflow_dispatch: # Позволит запускать сборку вручную кнопкой
+  workflow_dispatch: # Позволит вам запускать сборку вручную кнопкой
 
 jobs:
   build:
-    runs-on: macos-latest # Берем самый свежий виртуальный Mac от GitHub
+    runs-on: macos-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/actions@v4
-
-    - name: Create Dummy Xcode Project
+    # 1. Скачиваем официальный открытый код плеера VLC
+    - name: Clone VLC Source Code
       run: |
-        # Этот шаг просто создает пустой тестовый проект на лету для проверки
-        mkdir -p TestApp
-        cd TestApp
-        echo "Creating a simple iOS app..."
-        # Здесь в реальном будущем будет команда сборки вашего приложения
+        git clone https://videolan.org
+        cd vlc-ios
 
-    - name: Show macOS Info
+    # 2. Собираем приложение в папку (без платной подписи Apple)
+    - name: Build Xcode Project
       run: |
-        echo "Проверяем версию Xcode на сервере:"
-        xcodebuild -version
+        cd vlc-ios
+        xcodebuild -project VLC.xcodeproj -scheme "VLC-iOS" -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+
+    # 3. Упаковываем результат в готовый .ipa файл для Айфона
+    - name: Create IPA Package
+      run: |
+        mkdir -p Payload
+        cp -r vlc-ios/build/Release-iphoneos/VLC.app Payload/
+        zip -r vlc-app.ipa Payload
+        mv vlc-app.ipa ../
+
+    # 4. Выкладываем готовый файл на GitHub, чтобы вы могли его скачать
+    - name: Upload Finished IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: vlc-ios-application
+        path: vlc-app.ipa
