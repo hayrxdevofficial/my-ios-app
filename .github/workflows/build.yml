@@ -1,0 +1,26 @@
+name: hayrx
+on:
+  push:
+    branches: [ "main" ] # Запускать сборку при каждом обновлении кода
+  workflow_dispatch: # Позволит запускать сборку вручную кнопкой
+
+jobs:
+  build:
+    runs-on: macos-latest # Берем самый свежий виртуальный Mac от GitHub
+
+    steps:
+    - name: Checkout code
+      uses: actions/actions@v4
+
+    - name: Create Dummy Xcode Project
+      run: |
+        # Этот шаг просто создает пустой тестовый проект на лету для проверки
+        mkdir -p TestApp
+        cd TestApp
+        echo "Creating a simple iOS app..."
+        # Здесь в реальном будущем будет команда сборки вашего приложения
+
+    - name: Show macOS Info
+      run: |
+        echo "Проверяем версию Xcode на сервере:"
+        xcodebuild -version
