@@ -1,35 +1,80 @@
-name: hayrx
+name: Build My First Custom App
 on:
-  workflow_dispatch: # Позволит вам запускать сборку вручную кнопкой
+  workflow_dispatch: # Запуск вручную по кнопке
 
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
-    # 1. Скачиваем официальный открытый код плеера VLC
-    - name: Clone VLC Source Code
-      run: |
-        git clone https://videolan.org
-        cd vlc-ios
+    # 1. Скачиваем ваши файлы кода из репозитория
+    - name: Checkout Code
+      uses: actions/checkout@v4
 
-    # 2. Собираем приложение в папку (без платной подписи Apple)
-    - name: Build Xcode Project
+    # 2. Магия: создаем структуру проекта SwiftPM прямо в облаке
+    - name: Prepare Swift Package Project
       run: |
-        cd vlc-ios
-        xcodebuild -project VLC.xcodeproj -scheme "VLC-iOS" -configuration Release -sdk iphoneos CODE_SIGNING_ALLOWED=NO
+        mkdir -p MyCustomApp/Sources
+        mv ContentView.swift MyCustomApp/Sources/
+        mv MyApp.swift MyCustomApp/Sources/
+        
+        # Создаем файл манифеста, чтобы macOS поняла, как это собирать
+        cat << 'EOF' > MyCustomApp/Package.swift
+        // swift-interface-format-version: 1.0
+        import PackageDescription
 
-    # 3. Упаковываем результат в готовый .ipa файл для Айфона
-    - name: Create IPA Package
+        let package = Package(
+            name: "MyCustomApp",
+            platforms: [.iOS(.v15)],
+            products: [.executable(name: "MyCustomApp", targets: ["MyCustomApp"])],
+            targets: [.executableTarget(name: "MyCustomApp", path: "Sources")]
+        )
+        EOF
+
+    # 3. Компилируем код в готовое приложение для Айфона
+    - name: Build iOS Executable
       run: |
-        mkdir -p Payload
-        cp -r vlc-ios/build/Release-iphoneos/VLC.app Payload/
-        zip -r vlc-app.ipa Payload
-        mv vlc-app.ipa ../
+        cd MyCustomApp
+        # Собираем код под реальный процессор iPhone (arm64)
+        swift build -c release --triple arm64-apple-ios15.0
 
-    # 4. Выкладываем готовый файл на GitHub, чтобы вы могли его скачать
-    - name: Upload Finished IPA
+    # 4. Упаковываем результат в правильный формат .ipa
+    - name: Package into IPA
+      run: |
+        mkdir -p Payload/MyCustomApp.app
+        # Копируем скомпилированный файл в папку приложения
+        cp MyCustomApp/.build/plugins/Outputs/MyCustomApp Payload/MyCustomApp.app/MyCustomApp
+        
+        # Создаем обязательный файл настроек Info.plist, чтобы Айфон понял, что это за программа
+        cat << 'EOF' > Payload/MyCustomApp.app/Info.plist
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+        <plist version="1.0">
+        <dict>
+            <key>CFBundleExecutable</key>
+            <string>MyCustomApp</string>
+            <key>CFBundleIdentifier</key>
+            <string>com.myname.mycustomapp</string>
+            <key>CFBundleName</key>
+            <string>My First App</string>
+            <key>CFBundlePackageType</key>
+            <string>APPL</string>
+            <key>CFBundleShortVersionString</key>
+            <string>1.0</string>
+            <key>CFBundleVersion</key>
+            <string>1</string>
+            <key>MinimumOSVersion</key>
+            <string>15.0</string>
+        </dict>
+        </plist>
+        EOF
+        
+        # Архивируем всё это в .ipa
+        zip -r MyFirstApp.ipa Payload
+
+    # 5. Отдаем готовый файл вам
+    - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: vlc-ios-application
-        path: vlc-app.ipa
+        name: my-first-ios-app
+        path: MyFirstApp.ipa
