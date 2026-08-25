@@ -7,18 +7,18 @@ jobs:
     runs-on: macos-latest
 
     steps:
-    # 1. Скачиваем ваши файлы кода (ContentView.swift и MyApp.swift)
+    # 1. Скачиваем ваши файлы кода из репозитория
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Создаем правильную структуру проекта для компилятора
+    # 2. Создаем структуру проекта, которую понимает Xcode
     - name: Prepare Swift Package Project
       run: |
         mkdir -p MyCustomApp/Sources
         mv ContentView.swift MyCustomApp/Sources/
         mv MyApp.swift MyCustomApp/Sources/
         
-        # Создаем файл манифеста с ИСПРАВЛЕННОЙ версией инструментов Swift
+        # Создаем файл настроек
         cat << 'EOF' > MyCustomApp/Package.swift
         // swift-tools-version: 5.9
         import PackageDescription
@@ -31,18 +31,22 @@ jobs:
         )
         EOF
 
-    # 3. Компилируем код под реальный процессор iPhone (arm64)
+    # 3. Компилируем код с указанием точного пути к библиотекам iOS SDK
     - name: Build iOS Executable
       run: |
         cd MyCustomApp
-        swift build -c release --triple arm64-apple-ios15.0
+        # Находим в системе точный путь к библиотекам iOS
+        IOS_SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
+        
+        # Запускаем сборку, подкинув правильный SDK компилятору
+        swift build -c release --triple arm64-apple-ios15.0 -Xswiftc -sdk -Xswiftc "$IOS_SDK_PATH"
 
-    # 4. Собираем приложение в папку и создаем файл настроек Info.plist
+    # 4. Собираем приложение в готовую структуру папок
     - name: Package into App Folder
       run: |
         mkdir -p Payload/MyCustomApp.app
         
-        # Копируем скомпилированный бинарник программы
+        # Находим скомпилированный файл программы и копируем его
         cp MyCustomApp/.build/plugins/Outputs/MyCustomApp Payload/MyCustomApp.app/MyCustomApp
         
         # Создаем обязательный файл описания приложения
@@ -69,10 +73,10 @@ jobs:
         </plist>
         EOF
         
-        # Архивируем всё в формат .ipa для Айфона
+        # Архивируем в формат .ipa
         zip -r MyFirstApp.ipa Payload
 
-    # 5. Выкладываем готовый файл, чтобы вы могли его скачать
+    # 5. Выкладываем файл для скачивания
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
