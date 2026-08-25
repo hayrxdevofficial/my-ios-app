@@ -1,64 +1,40 @@
 name: Build My First Custom App
 on:
-  workflow_dispatch: # Запуск вручную по кнопке
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: macos-latest
 
     steps:
-    # 1. Скачиваем ваши файлы кода из репозитория
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # 2. Создаем структуру проекта, которую понимает Xcode
-    - name: Prepare Swift Package Project
+    - name: Create Real Xcode Project
       run: |
-        mkdir -p MyCustomApp/Sources
-        mv ContentView.swift MyCustomApp/Sources/
-        mv MyApp.swift MyCustomApp/Sources/
+        mkdir -p MyCustomApp
+        # Проверяем наличие файлов и копируем
+        if [ -f "ContentView.swift" ]; then
+          mv ContentView.swift MyCustomApp/
+        fi
+        if [ -f "MyApp.swift" ]; then
+          mv MyApp.swift MyCustomApp/
+        fi
         
-        # Создаем файл настроек
-        cat << 'EOF' > MyCustomApp/Package.swift
-        // swift-tools-version: 5.9
-        import PackageDescription
-
-        let package = Package(
-            name: "MyCustomApp",
-            platforms: [.iOS(.v15)],
-            products: [.executable(name: "MyCustomApp", targets: ["MyCustomApp"])],
-            targets: [.executableTarget(name: "MyCustomApp", path: "Sources")]
-        )
-        EOF
-
-    # 3. Компилируем код с указанием точного пути к библиотекам iOS SDK
-    - name: Build iOS Executable
-      run: |
-        cd MyCustomApp
-        # Находим в системе точный путь к библиотекам iOS
-        IOS_SDK_PATH=$(xcrun --sdk iphoneos --show-sdk-path)
-        
-        # Запускаем сборку, подкинув правильный SDK компилятору
-        swift build -c release --triple arm64-apple-ios15.0 -Xswiftc -sdk -Xswiftc "$IOS_SDK_PATH"
-
-    # 4. Собираем приложение в готовую структуру папок
-    - name: Package into App Folder
-      run: |
-        mkdir -p Payload/MyCustomApp.app
-        
-        # Находим скомпилированный файл программы и копируем его
-        cp MyCustomApp/.build/plugins/Outputs/MyCustomApp Payload/MyCustomApp.app/MyCustomApp
-        
-        # Создаем обязательный файл описания приложения
-        cat << 'EOF' > Payload/MyCustomApp.app/Info.plist
+        # Создаем Info.plist
+        cat << 'EOF' > MyCustomApp/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
-        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://apple.com">
+        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
         <plist version="1.0">
         <dict>
+            <key>CFBundleDevelopmentRegion</key>
+            <string>en</string>
             <key>CFBundleExecutable</key>
             <string>MyCustomApp</string>
             <key>CFBundleIdentifier</key>
             <string>com.myname.mycustomapp</string>
+            <key>CFBundleInfoDictionaryVersion</key>
+            <string>6.0</string>
             <key>CFBundleName</key>
             <string>My First App</string>
             <key>CFBundlePackageType</key>
@@ -67,16 +43,382 @@ jobs:
             <string>1.0</string>
             <key>CFBundleVersion</key>
             <string>1</string>
+            <key>LSRequiresIPhoneOS</key>
+            <true/>
             <key>MinimumOSVersion</key>
             <string>15.0</string>
+            <key>UILaunchScreen</key>
+            <dict/>
+            <key>UIRequiredDeviceCapabilities</key>
+            <array>
+                <string>armv7</string>
+            </array>
+            <key>UISupportedInterfaceOrientations</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+            </array>
         </dict>
         </plist>
         EOF
         
-        # Архивируем в формат .ipa
+        # Создаем простой Swift файл для теста, если его нет
+        if [ ! -f "MyCustomApp/MyApp.swift" ]; then
+          cat << 'EOF' > MyCustomApp/MyApp.swift
+        import SwiftUI
+
+        @main
+        struct MyCustomApp: App {
+            var body: some Scene {
+                WindowGroup {
+                    ContentView()
+                }
+            }
+        }
+        EOF
+        fi
+        
+        if [ ! -f "MyCustomApp/ContentView.swift" ]; then
+          cat << 'EOF' > MyCustomApp/ContentView.swift
+        import SwiftUI
+
+        struct ContentView: View {
+            var body: some View {
+                VStack {
+                    Image(systemName: "globe")
+                        .imageScale(.large)
+                        .foregroundStyle(.tint)
+                    Text("Hello, World!")
+                }
+                .padding()
+            }
+        }
+
+        #Preview {
+            ContentView()
+        }
+        EOF
+        fi
+
+    - name: Create Xcode Project
+      run: |
+        # Создаем полноценный Xcode проект
+        cd MyCustomApp
+        
+        # Создаем .xcodeproj директорию
+        mkdir -p MyCustomApp.xcodeproj
+        
+        # Создаем project.pbxproj
+        cat << 'EOF' > MyCustomApp.xcodeproj/project.pbxproj
+        // !$*UTF8*$!
+        {
+            archiveVersion = 1;
+            classes = {
+            };
+            objectVersion = 56;
+            objects = {
+                /* Begin PBXFileReference section */
+                E1A2B3C4D5E6F7G8H9 /* MyCustomApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MyCustomApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+                E1A2B3C4D5E6F7G8H0 /* MyApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyApp.swift; sourceTree = "<group>"; };
+                E1A2B3C4D5E6F7G8H1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+                E1A2B3C4D5E6F7G8H2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+                /* End PBXFileReference section */
+                
+                /* Begin PBXGroup section */
+                E1A2B3C4D5E6F7G8H3 = {isa = PBXGroup; children = (E1A2B3C4D5E6F7G8H0, E1A2B3C4D5E6F7G8H1, E1A2B3C4D5E6F7G8H2, E1A2B3C4D5E6F7G8H4,); sourceTree = "<group>"; };
+                E1A2B3C4D5E6F7G8H4 /* Products */ = {isa = PBXGroup; children = (E1A2B3C4D5E6F7G8H9,); sourceTree = "<group>"; };
+                /* End PBXGroup section */
+                
+                /* Begin PBXProject section */
+                E1A2B3C4D5E6F7G8H5 /* Project object */ = {
+                    isa = PBXProject;
+                    attributes = {
+                        BuildIndependentTargetsInParallel = 1;
+                        LastSwiftUpdateCheck = 1500;
+                        LastUpgradeCheck = 1500;
+                        TargetAttributes = {
+                            E1A2B3C4D5E6F7G8H6 = {
+                                CreatedOnToolsVersion = 15.0;
+                            };
+                        };
+                    };
+                    buildConfigurationList = E1A2B3C4D5E6F7G8H7 /* Build configuration list for PBXProject "MyCustomApp" */;
+                    compatibilityVersion = "Xcode 14.0";
+                    developmentRegion = en;
+                    hasScannedForEncodings = 0;
+                    knownRegions = (
+                        en,
+                        Base,
+                    );
+                    mainGroup = E1A2B3C4D5E6F7G8H3;
+                    productRefGroup = E1A2B3C4D5E6F7G8H4 /* Products */;
+                    projectDirPath = "";
+                    projectRoot = "";
+                    targets = (
+                        E1A2B3C4D5E6F7G8H6 /* MyCustomApp */,
+                    );
+                };
+                /* End PBXProject section */
+                
+                /* Begin PBXTargetDependency section */
+                /* End PBXTargetDependency section */
+                
+                /* Begin XCBuildConfiguration section */
+                E1A2B3C4D5E6F7G8H8 /* Debug */ = {
+                    isa = XCBuildConfiguration;
+                    buildSettings = {
+                        ALWAYS_SEARCH_USER_PATHS = NO;
+                        CLANG_ANALYZER_NONNULL = YES;
+                        CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+                        CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                        CLANG_ENABLE_MODULES = YES;
+                        CLANG_ENABLE_OBJC_ARC = YES;
+                        CLANG_ENABLE_OBJC_WEAK = YES;
+                        CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+                        CLANG_WARN_BOOL_CONVERSION = YES;
+                        CLANG_WARN_COMMA = YES;
+                        CLANG_WARN_CONSTANT_CONVERSION = YES;
+                        CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+                        CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+                        CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+                        CLANG_WARN_EMPTY_BODY = YES;
+                        CLANG_WARN_ENUM_CONVERSION = YES;
+                        CLANG_WARN_INFINITE_RECURSION = YES;
+                        CLANG_WARN_INT_CONVERSION = YES;
+                        CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+                        CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+                        CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+                        CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+                        CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+                        CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+                        CLANG_WARN_STRICT_PROTOTYPES = YES;
+                        CLANG_WARN_SUSPICIOUS_MOVE = YES;
+                        CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+                        CLANG_WARN_UNREACHABLE_CODE = YES;
+                        CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+                        COPY_PHASE_STRIP = NO;
+                        DEBUG_INFORMATION_FORMAT = dwarf;
+                        ENABLE_STRICT_OBJC_MSGSEND = YES;
+                        ENABLE_TESTABILITY = YES;
+                        GCC_C_LANGUAGE_STANDARD = gnu17;
+                        GCC_DYNAMIC_NO_PIC = NO;
+                        GCC_NO_COMMON_BLOCKS = YES;
+                        GCC_OPTIMIZATION_LEVEL = 0;
+                        GCC_PREPROCESSOR_DEFINITIONS = (
+                            "DEBUG=1",
+                            "$(inherited)",
+                        );
+                        GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                        GCC_WARN_UNDECLARED_SELECTOR = YES;
+                        GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                        GCC_WARN_UNUSED_FUNCTION = YES;
+                        GCC_WARN_UNUSED_VARIABLE = YES;
+                        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                        MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+                        MTL_FAST_MATH = YES;
+                        ONLY_ACTIVE_ARCH = YES;
+                        SDKROOT = iphoneos;
+                        SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+                        SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+                    };
+                    name = Debug;
+                };
+                E1A2B3C4D5E6F7G8H9 /* Release */ = {
+                    isa = XCBuildConfiguration;
+                    buildSettings = {
+                        ALWAYS_SEARCH_USER_PATHS = NO;
+                        CLANG_ANALYZER_NONNULL = YES;
+                        CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+                        CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+                        CLANG_ENABLE_MODULES = YES;
+                        CLANG_ENABLE_OBJC_ARC = YES;
+                        CLANG_ENABLE_OBJC_WEAK = YES;
+                        CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+                        CLANG_WARN_BOOL_CONVERSION = YES;
+                        CLANG_WARN_COMMA = YES;
+                        CLANG_WARN_CONSTANT_CONVERSION = YES;
+                        CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+                        CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+                        CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+                        CLANG_WARN_EMPTY_BODY = YES;
+                        CLANG_WARN_ENUM_CONVERSION = YES;
+                        CLANG_WARN_INFINITE_RECURSION = YES;
+                        CLANG_WARN_INT_CONVERSION = YES;
+                        CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+                        CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+                        CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+                        CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+                        CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+                        CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+                        CLANG_WARN_STRICT_PROTOTYPES = YES;
+                        CLANG_WARN_SUSPICIOUS_MOVE = YES;
+                        CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+                        CLANG_WARN_UNREACHABLE_CODE = YES;
+                        CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+                        COPY_PHASE_STRIP = NO;
+                        DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+                        ENABLE_NS_ASSERTIONS = NO;
+                        ENABLE_STRICT_OBJC_MSGSEND = YES;
+                        GCC_C_LANGUAGE_STANDARD = gnu17;
+                        GCC_NO_COMMON_BLOCKS = YES;
+                        GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+                        GCC_WARN_UNDECLARED_SELECTOR = YES;
+                        GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+                        GCC_WARN_UNUSED_FUNCTION = YES;
+                        GCC_WARN_UNUSED_VARIABLE = YES;
+                        IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+                        MTL_ENABLE_DEBUG_INFO = NO;
+                        MTL_FAST_MATH = YES;
+                        SDKROOT = iphoneos;
+                        SWIFT_COMPILATION_MODE = wholemodule;
+                        SWIFT_OPTIMIZATION_LEVEL = "-O";
+                        VALIDATE_PRODUCT = YES;
+                    };
+                    name = Release;
+                };
+                E1A2B3C4D5E6F7G8I0 /* Build configuration list for PBXProject "MyCustomApp" */ = {
+                    isa = XCConfigurationList;
+                    buildConfigurations = (
+                        E1A2B3C4D5E6F7G8H8 /* Debug */,
+                        E1A2B3C4D5E6F7G8H9 /* Release */,
+                    );
+                    defaultConfigurationIsVisible = 0;
+                    defaultConfigurationName = Release;
+                };
+                /* End XCBuildConfiguration section */
+                
+                /* Begin PBXSourcesBuildPhase section */
+                E1A2B3C4D5E6F7G8I1 /* Sources */ = {
+                    isa = PBXSourcesBuildPhase;
+                    buildActionMask = 2147483647;
+                    files = (
+                    );
+                    runOnlyForDeploymentPostprocessing = 0;
+                };
+                /* End PBXSourcesBuildPhase section */
+                
+                /* Begin PBXNativeTarget section */
+                E1A2B3C4D5E6F7G8H6 /* MyCustomApp */ = {
+                    isa = PBXNativeTarget;
+                    buildConfigurationList = E1A2B3C4D5E6F7G8I2 /* Build configuration list for PBXNativeTarget "MyCustomApp" */;
+                    buildPhases = (
+                        E1A2B3C4D5E6F7G8I1 /* Sources */,
+                    );
+                    buildRules = (
+                    );
+                    dependencies = (
+                    );
+                    name = MyCustomApp;
+                    productName = MyCustomApp;
+                    productReference = E1A2B3C4D5E6F7G8H9 /* MyCustomApp.app */;
+                    productType = "com.apple.product-type.application";
+                };
+                /* End PBXNativeTarget section */
+                
+                /* Begin XCBuildConfiguration section */
+                E1A2B3C4D5E6F7G8I3 /* Debug */ = {
+                    isa = XCBuildConfiguration;
+                    buildSettings = {
+                        ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                        CODE_SIGN_ENTITLEMENTS = MyCustomApp/MyCustomApp.entitlements;
+                        CODE_SIGN_IDENTITY = "Apple Development";
+                        CODE_SIGN_STYLE = Automatic;
+                        CURRENT_PROJECT_VERSION = 1;
+                        DEVELOPMENT_TEAM = "";
+                        ENABLE_PREVIEWS = YES;
+                        GENERATE_INFOPLIST_FILE = YES;
+                        INFOPLIST_FILE = MyCustomApp/Info.plist;
+                        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                        INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                        LD_RUNPATH_SEARCH_PATHS = (
+                            "$(inherited)",
+                            "@executable_path/Frameworks",
+                        );
+                        MARKETING_VERSION = 1.0;
+                        PRODUCT_BUNDLE_IDENTIFIER = com.myname.mycustomapp;
+                        PRODUCT_NAME = "$(TARGET_NAME)";
+                        SWIFT_EMIT_LOC_STRINGS = YES;
+                        SWIFT_VERSION = 5.0;
+                        TARGETED_DEVICE_FAMILY = "1,2";
+                    };
+                    name = Debug;
+                };
+                E1A2B3C4D5E6F7G8I4 /* Release */ = {
+                    isa = XCBuildConfiguration;
+                    buildSettings = {
+                        ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+                        CODE_SIGN_ENTITLEMENTS = MyCustomApp/MyCustomApp.entitlements;
+                        CODE_SIGN_IDENTITY = "Apple Development";
+                        CODE_SIGN_STYLE = Automatic;
+                        CURRENT_PROJECT_VERSION = 1;
+                        DEVELOPMENT_TEAM = "";
+                        ENABLE_PREVIEWS = YES;
+                        GENERATE_INFOPLIST_FILE = YES;
+                        INFOPLIST_FILE = MyCustomApp/Info.plist;
+                        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+                        INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+                        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+                        LD_RUNPATH_SEARCH_PATHS = (
+                            "$(inherited)",
+                            "@executable_path/Frameworks",
+                        );
+                        MARKETING_VERSION = 1.0;
+                        PRODUCT_BUNDLE_IDENTIFIER = com.myname.mycustomapp;
+                        PRODUCT_NAME = "$(TARGET_NAME)";
+                        SWIFT_EMIT_LOC_STRINGS = YES;
+                        SWIFT_VERSION = 5.0;
+                        TARGETED_DEVICE_FAMILY = "1,2";
+                    };
+                    name = Release;
+                };
+                E1A2B3C4D5E6F7G8I2 /* Build configuration list for PBXNativeTarget "MyCustomApp" */ = {
+                    isa = XCConfigurationList;
+                    buildConfigurations = (
+                        E1A2B3C4D5E6F7G8I3 /* Debug */,
+                        E1A2B3C4D5E6F7G8I4 /* Release */,
+                    );
+                    defaultConfigurationIsVisible = 0;
+                    defaultConfigurationName = Release;
+                };
+                /* End XCBuildConfiguration section */
+            };
+            rootObject = E1A2B3C4D5E6F7G8H5 /* Project object */;
+        }
+        EOF
+
+    - name: Build with Xcode
+      run: |
+        cd MyCustomApp
+        xcodebuild -project MyCustomApp.xcodeproj \
+          -scheme MyCustomApp \
+          -configuration Release \
+          -sdk iphoneos \
+          -arch arm64 \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          DEVELOPMENT_TEAM="" \
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          ONLY_ACTIVE_ARCH=NO \
+          BUILD_DIR="$PWD/build"
+
+    - name: Package into IPA
+      run: |
+        mkdir -p Payload
+        # Ищем .app файл
+        APP_PATH=$(find MyCustomApp/build -name "*.app" -type d | head -n 1)
+        if [ -z "$APP_PATH" ]; then
+          echo "❌ .app file not found!"
+          exit 1
+        fi
+        echo "✅ Found .app at: $APP_PATH"
+        cp -r "$APP_PATH" Payload/
         zip -r MyFirstApp.ipa Payload
 
-    # 5. Выкладываем файл для скачивания
     - name: Upload IPA Artifact
       uses: actions/upload-artifact@v4
       with:
