@@ -65,6 +65,9 @@ jobs:
           bundleIdPrefix: com.hayrx
           deploymentTarget:
             iOS: "15.0"
+        settings:
+          base:
+            SWIFT_VERSION: "5.0"
         targets:
           HClick:
             type: application
@@ -80,7 +83,6 @@ jobs:
                 PRODUCT_NAME: HClick
                 MARKETING_VERSION: "1.0"
                 CURRENT_PROJECT_VERSION: "1"
-                SWIFT_VERSION: "5.0"
                 TARGETED_DEVICE_FAMILY: "1"
                 GENERATE_INFOPLIST_FILE: NO
                 CODE_SIGNING_ALLOWED: NO
@@ -89,26 +91,26 @@ jobs:
         EOF
         xcodegen generate
 
-    - name: Build with Xcode
+    - name: Build archive (unsigned)
       run: |
         cd MyCustomApp
-        xcodebuild -project HClick.xcodeproj \
+        xcodebuild archive \
+          -project HClick.xcodeproj \
           -scheme HClick \
           -configuration Release \
           -sdk iphoneos \
-          -arch arm64 \
+          -destination "generic/platform=iOS" \
+          -archivePath ./build/HClick.xcarchive \
           CODE_SIGNING_ALLOWED=NO \
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGN_IDENTITY="" \
           DEVELOPMENT_TEAM="" \
-          PROVISIONING_PROFILE_SPECIFIER="" \
-          ONLY_ACTIVE_ARCH=NO \
-          -derivedDataPath build
+          PROVISIONING_PROFILE_SPECIFIER=""
 
     - name: Package into IPA
       run: |
         mkdir -p Payload
-        APP_PATH=$(find MyCustomApp/build -name "HClick.app" -type d | head -n 1)
+        APP_PATH=$(find MyCustomApp/build/HClick.xcarchive/Products/Applications -name "HClick.app" -type d | head -n 1)
         if [ -z "$APP_PATH" ]; then
           echo "❌ .app file not found!"
           find MyCustomApp/build -name "*.app" -type d
