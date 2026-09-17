@@ -15,6 +15,7 @@ jobs:
         mkdir -p MyCustomApp
         cp ContentView.swift MyCustomApp/ContentView.swift
         cp MyApp.swift MyCustomApp/MyApp.swift
+        cp -R Assets.xcassets MyCustomApp/Assets.xcassets
 
         cat << 'EOF' > MyCustomApp/Info.plist
         <?xml version="1.0" encoding="UTF-8"?>
@@ -30,9 +31,9 @@ jobs:
             <key>CFBundleInfoDictionaryVersion</key>
             <string>6.0</string>
             <key>CFBundleName</key>
-            <string>HClick</string>
+            <string>First App HayrX</string>
             <key>CFBundleDisplayName</key>
-            <string>HClick</string>
+            <string>First App HayrX</string>
             <key>CFBundlePackageType</key>
             <string>APPL</string>
             <key>CFBundleShortVersionString</key>
@@ -77,6 +78,8 @@ jobs:
             sources:
               - MyApp.swift
               - ContentView.swift
+              - path: Assets.xcassets
+                buildPhase: resources
             info:
               path: Info.plist
             settings:
