@@ -42,7 +42,7 @@ jobs:
             <key>LSRequiresIPhoneOS</key>
             <true/>
             <key>MinimumOSVersion</key>
-            <string>15.0</string>
+            <string>16.0</string>
             <key>UILaunchScreen</key>
             <dict/>
             <key>UISupportedInterfaceOrientations</key>
@@ -64,14 +64,16 @@ jobs:
         options:
           bundleIdPrefix: com.hayrx
           deploymentTarget:
-            iOS: "15.0"
+            iOS: "16.0"
         settings:
           base:
             SWIFT_VERSION: "5.0"
+            IPHONEOS_DEPLOYMENT_TARGET: "16.0"
         targets:
           HClick:
             type: application
             platform: iOS
+            deploymentTarget: "16.0"
             sources:
               - MyApp.swift
               - ContentView.swift
@@ -105,7 +107,8 @@ jobs:
           CODE_SIGNING_REQUIRED=NO \
           CODE_SIGN_IDENTITY="" \
           DEVELOPMENT_TEAM="" \
-          PROVISIONING_PROFILE_SPECIFIER=""
+          PROVISIONING_PROFILE_SPECIFIER="" \
+          IPHONEOS_DEPLOYMENT_TARGET=16.0
 
     - name: Package into IPA
       run: |
