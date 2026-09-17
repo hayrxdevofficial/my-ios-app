@@ -79,7 +79,6 @@ jobs:
               - MyApp.swift
               - ContentView.swift
               - path: Assets.xcassets
-                buildPhase: resources
             info:
               path: Info.plist
             settings:
