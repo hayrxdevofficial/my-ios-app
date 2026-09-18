@@ -136,7 +136,6 @@ struct MainMenuView: View {
                 }.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Шапка: монеты
                     HStack {
                         Spacer()
                         HStack(spacing: 6) {
@@ -154,7 +153,6 @@ struct MainMenuView: View {
                     .padding(.horizontal, 16)
                     .padding(.top, safeTop + 8)
 
-                    // Заголовок
                     VStack(spacing: 2) {
                         Text("Sungarov")
                             .font(.system(size: 38, weight: .heavy, design: .rounded))
@@ -421,15 +419,15 @@ struct GameView: View {
             let safeTop = geo.safeAreaInsets.top
             let safeBottom = geo.safeAreaInsets.bottom
 
-            // Умеренные размеры — играбельно и крупно
+            // Размеры — крупнее, игра сложнее
             let groundHeight: CGFloat = h * 0.09
-            let birdSize: CGFloat = w * 0.12
-            let pipeWidth: CGFloat = w * 0.20
-            let gapHeight: CGFloat = h * 0.28
-            let pipeSpacing: CGFloat = w * 0.70
-            let pipeSpeed: CGFloat = w * 0.0055
-            let gravity: CGFloat = h * 0.00085
-            let coinSize: CGFloat = w * 0.09
+            let birdSize: CGFloat = w * 0.13
+            let pipeWidth: CGFloat = w * 0.22
+            let gapHeight: CGFloat = h * 0.25
+            let pipeSpacing: CGFloat = w * 0.72
+            let pipeSpeed: CGFloat = w * 0.0066
+            let gravity: CGFloat = h * 0.00092
+            let coinSize: CGFloat = w * 0.10
             let birdX = w * 0.28
 
             ZStack {
@@ -486,12 +484,13 @@ struct GameView: View {
                     .rotationEffect(.degrees(Double(birdVelocity) * 2))
                     .position(x: birdX, y: birdY)
 
+                // HUD — опущен ниже, чтобы не мешала чёлка
                 VStack {
                     Text("\(score)")
-                        .font(.system(size: 60, weight: .heavy, design: .rounded))
+                        .font(.system(size: 64, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 2)
-                        .padding(.top, safeTop + 8)
+                        .padding(.top, safeTop + 28)
                     Text("Рекорд: \(bestScore)")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundColor(.white.opacity(0.9))
@@ -527,7 +526,7 @@ struct GameView: View {
                             .padding(.leading, 16)
                             Spacer()
                         }
-                        .padding(.top, safeTop + 4)
+                        .padding(.top, safeTop + 24)
                         Spacer()
                     }
                 }
@@ -652,7 +651,7 @@ struct GameView: View {
     func handleTap() {
         if isGameOver { return }
         if !isStarted { isStarted = true }
-        birdVelocity = -11
+        birdVelocity = -11.5
     }
 
     func updateGame(
