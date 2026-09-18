@@ -45,10 +45,24 @@ jobs:
             <key>MinimumOSVersion</key>
             <string>16.0</string>
             <key>UILaunchScreen</key>
-            <dict/>
+            <dict>
+                <key>UIColorName</key>
+                <string></string>
+            </dict>
+            <key>UIRequiresFullScreen</key>
+            <true/>
+            <key>UIStatusBarHidden</key>
+            <true/>
+            <key>UIViewControllerBasedStatusBarAppearance</key>
+            <false/>
             <key>UISupportedInterfaceOrientations</key>
             <array>
                 <string>UIInterfaceOrientationPortrait</string>
+            </array>
+            <key>UISupportedInterfaceOrientations~ipad</key>
+            <array>
+                <string>UIInterfaceOrientationPortrait</string>
+                <string>UIInterfaceOrientationPortraitUpsideDown</string>
             </array>
         </dict>
         </plist>
