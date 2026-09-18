@@ -34,7 +34,7 @@ enum AppScreen {
     case skins
 }
 
-// MARK: - Стор (глобальное состояние игры)
+// MARK: - Стор
 
 final class GameStore: ObservableObject {
     @Published var coins: Int {
@@ -126,45 +126,44 @@ struct MainMenuView: View {
                     Spacer()
                     Rectangle()
                         .fill(Color(red: 0.55, green: 0.85, blue: 0.35))
-                        .frame(height: 80 + safeBottom)
+                        .frame(height: 90 + safeBottom)
                         .overlay(
                             Rectangle()
                                 .fill(Color(red: 0.45, green: 0.75, blue: 0.25))
-                                .frame(height: 14),
+                                .frame(height: 16),
                             alignment: .top
                         )
                 }.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Шапка: монеты
                     HStack {
                         Spacer()
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
                                 .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
                             Text("\(store.coins)")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
                         .background(Color.black.opacity(0.3))
-                        .cornerRadius(20)
+                        .cornerRadius(22)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, safeTop + 8)
 
                     VStack(spacing: 4) {
                         Text("Sungarov")
-                            .font(.system(size: 44, weight: .heavy, design: .rounded))
+                            .font(.system(size: 48, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 3)
                         Text("Energiya")
-                            .font(.system(size: 38, weight: .bold, design: .rounded))
+                            .font(.system(size: 42, weight: .bold, design: .rounded))
                             .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
                             .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 3)
                         Text("Flappy")
-                            .font(.system(size: 34, weight: .heavy, design: .rounded))
+                            .font(.system(size: 38, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 3)
                     }
@@ -172,20 +171,20 @@ struct MainMenuView: View {
 
                     Spacer()
 
-                    AnimatedBird(imageName: store.selectedSkin, size: min(w, h) * 0.35)
+                    AnimatedBird(imageName: store.selectedSkin, size: min(w, h) * 0.40)
 
                     Spacer()
 
                     Button(action: onStart) {
                         HStack(spacing: 10) {
                             Image(systemName: "play.fill")
-                                .font(.system(size: 22, weight: .bold))
+                                .font(.system(size: 24, weight: .bold))
                             Text("Играть")
-                                .font(.system(size: 24, weight: .heavy, design: .rounded))
+                                .font(.system(size: 26, weight: .heavy, design: .rounded))
                         }
                         .foregroundColor(.white)
-                        .frame(maxWidth: 280)
-                        .padding(.vertical, 18)
+                        .frame(maxWidth: 300)
+                        .padding(.vertical, 20)
                         .background(
                             LinearGradient(
                                 colors: [Color(red: 0.98, green: 0.55, blue: 0.15),
@@ -193,7 +192,7 @@ struct MainMenuView: View {
                                 startPoint: .top, endPoint: .bottom
                             )
                         )
-                        .cornerRadius(20)
+                        .cornerRadius(22)
                         .shadow(color: .black.opacity(0.35), radius: 6, x: 0, y: 4)
                     }
                     .buttonStyle(.plain)
@@ -202,19 +201,19 @@ struct MainMenuView: View {
                         HStack(spacing: 8) {
                             Image(systemName: "paintpalette.fill")
                             Text("Скины")
-                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                                .font(.system(size: 20, weight: .semibold, design: .rounded))
                         }
                         .foregroundColor(.white)
-                        .frame(maxWidth: 280)
-                        .padding(.vertical, 14)
+                        .frame(maxWidth: 300)
+                        .padding(.vertical, 16)
                         .background(Color.black.opacity(0.25))
-                        .cornerRadius(16)
+                        .cornerRadius(18)
                     }
                     .buttonStyle(.plain)
                     .padding(.top, 10)
 
                     Text("Рекорд: \(UserDefaults.standard.integer(forKey: "bestScore"))")
-                        .font(.headline)
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white.opacity(0.9))
                         .shadow(color: .black.opacity(0.3), radius: 2)
                         .padding(.top, 16)
@@ -249,7 +248,7 @@ struct SkinsView: View {
                     HStack {
                         Button(action: onBack) {
                             Image(systemName: "chevron.left")
-                                .font(.system(size: 20, weight: .bold))
+                                .font(.system(size: 22, weight: .bold))
                                 .foregroundColor(.white)
                                 .padding(12)
                                 .background(Color.white.opacity(0.15))
@@ -257,26 +256,26 @@ struct SkinsView: View {
                         }
                         Spacer()
                         Text("Скины")
-                            .font(.system(size: 24, weight: .heavy, design: .rounded))
+                            .font(.system(size: 26, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                         Spacer()
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
                                 .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
                             Text("\(store.coins)")
-                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
                                 .foregroundColor(.white)
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
                         .background(Color.black.opacity(0.3))
-                        .cornerRadius(16)
+                        .cornerRadius(18)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, safeTop + 8)
 
                     ScrollView {
-                        VStack(spacing: 14) {
+                        VStack(spacing: 16) {
                             ForEach(ALL_SKINS) { skin in
                                 SkinRow(skin: skin, store: store)
                             }
@@ -305,17 +304,17 @@ struct SkinRow: View {
             Image(skin.id)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
-                .frame(width: 72, height: 72)
+                .frame(width: 84, height: 84)
                 .padding(8)
                 .background(Color.white.opacity(0.08))
-                .cornerRadius(14)
+                .cornerRadius(16)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(skin.name)
                     .font(.system(size: 15, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.65)
                     .fixedSize(horizontal: false, vertical: true)
 
                 if isOwned {
@@ -325,10 +324,10 @@ struct SkinRow: View {
                 } else {
                     HStack(spacing: 4) {
                         Image(systemName: "circle.fill")
-                            .font(.system(size: 12))
+                            .font(.system(size: 13))
                             .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
                         Text("\(skin.price)")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white.opacity(0.85))
                     }
                 }
@@ -339,15 +338,15 @@ struct SkinRow: View {
             if isOwned {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 28))
+                        .font(.system(size: 30))
                         .foregroundColor(.green)
                 } else {
                     Button { store.select(skin) } label: {
                         Text("Выбрать")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.system(size: 15, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 10)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 11)
                             .background(Color.blue)
                             .cornerRadius(12)
                     }
@@ -357,43 +356,40 @@ struct SkinRow: View {
                     _ = store.buy(skin)
                 } label: {
                     Text("Купить")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.white)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 11)
                         .background(canAfford ? Color.orange : Color.gray)
                         .cornerRadius(12)
                 }
                 .disabled(!canAfford)
             }
         }
-        .padding(14)
+        .padding(16)
         .background(Color.white.opacity(0.05))
-        .cornerRadius(18)
+        .cornerRadius(20)
     }
 }
 
-// MARK: - Анимированный персонаж (изолирован, анимация не «протекает»)
+// MARK: - Анимированный персонаж (крутится на месте)
 
 struct AnimatedBird: View {
     let imageName: String
     let size: CGFloat
-    @State private var rotated = false
-    @State private var bobbed = false
+    @State private var angle: Double = 0
 
     var body: some View {
         Image(imageName)
             .resizable()
             .aspectRatio(contentMode: .fit)
             .frame(width: size, height: size)
-            .rotationEffect(.degrees(rotated ? 8 : -8))
-            .offset(y: bobbed ? -14 : 0)
-            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 6)
-            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: rotated)
-            .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: bobbed)
+            .rotationEffect(.degrees(angle))
+            .shadow(color: .black.opacity(0.35), radius: 10, x: 0, y: 6)
             .onAppear {
-                rotated = true
-                bobbed = true
+                withAnimation(.linear(duration: 4).repeatForever(autoreverses: false)) {
+                    angle = 360
+                }
             }
     }
 }
@@ -423,15 +419,15 @@ struct GameView: View {
             let safeTop = geo.safeAreaInsets.top
             let safeBottom = geo.safeAreaInsets.bottom
 
-            let groundHeight: CGFloat = h * 0.09
-            let birdSize: CGFloat = w * 0.12
-            let pipeWidth: CGFloat = w * 0.20
-            let gapHeight: CGFloat = h * 0.26
-            let pipeSpacing: CGFloat = w * 0.68
-            let pipeSpeed: CGFloat = w * 0.0070
-            let gravity: CGFloat = h * 0.00085
-            let jumpForce: CGFloat = -h * 0.0145
-            let coinSize: CGFloat = w * 0.085
+            // Размеры (увеличены ~на 21%)
+            let groundHeight: CGFloat = h * 0.10
+            let birdSize: CGFloat = w * 0.15
+            let pipeWidth: CGFloat = w * 0.24
+            let gapHeight: CGFloat = h * 0.30
+            let pipeSpacing: CGFloat = w * 0.78
+            let pipeSpeed: CGFloat = w * 0.0080
+            let gravity: CGFloat = h * 0.00095
+            let coinSize: CGFloat = w * 0.11
             let birdX = w * 0.28
 
             ZStack {
@@ -449,7 +445,7 @@ struct GameView: View {
                         .overlay(
                             Rectangle()
                                 .fill(Color(red: 0.45, green: 0.75, blue: 0.25))
-                                .frame(height: 12),
+                                .frame(height: 14),
                             alignment: .top
                         )
                 }.ignoresSafeArea()
@@ -468,9 +464,9 @@ struct GameView: View {
                             Circle()
                                 .fill(Color(red: 1.0, green: 0.85, blue: 0.2))
                                 .frame(width: coinSize, height: coinSize)
-                                .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+                                .shadow(color: .black.opacity(0.3), radius: 4, x: 0, y: 3)
                             Circle()
-                                .stroke(Color(red: 0.9, green: 0.65, blue: 0.05), lineWidth: 3)
+                                .stroke(Color(red: 0.9, green: 0.65, blue: 0.05), lineWidth: 4)
                                 .frame(width: coinSize, height: coinSize)
                             Image(systemName: "star.fill")
                                 .font(.system(size: coinSize * 0.45))
@@ -484,18 +480,18 @@ struct GameView: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: birdSize, height: birdSize)
-                    .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+                    .shadow(color: .black.opacity(0.25), radius: 4, x: 0, y: 2)
                     .rotationEffect(.degrees(Double(birdVelocity) * 2))
                     .position(x: birdX, y: birdY)
 
                 VStack {
                     Text("\(score)")
-                        .font(.system(size: 64, weight: .heavy, design: .rounded))
+                        .font(.system(size: 72, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 2)
                         .padding(.top, safeTop + 8)
                     Text("Рекорд: \(bestScore)")
-                        .font(.headline)
+                        .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white.opacity(0.9))
                         .shadow(color: .black.opacity(0.3), radius: 2)
 
@@ -503,13 +499,13 @@ struct GameView: View {
                         Image(systemName: "circle.fill")
                             .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
                         Text("\(earnedCoins)")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                     }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
                     .background(Color.black.opacity(0.3))
-                    .cornerRadius(16)
+                    .cornerRadius(18)
                     .padding(.top, 8)
 
                     Spacer()
@@ -549,7 +545,7 @@ struct GameView: View {
                         groundHeight: groundHeight, safeTop: safeTop, safeBottom: safeBottom,
                         birdSize: birdSize, pipeWidth: pipeWidth, gapHeight: gapHeight,
                         pipeSpacing: pipeSpacing, pipeSpeed: pipeSpeed,
-                        gravity: gravity, jumpForce: jumpForce,
+                        gravity: gravity,
                         coinSize: coinSize, birdX: birdX
                     )
                 }
@@ -575,8 +571,8 @@ struct GameView: View {
                 .overlay(
                     Rectangle()
                         .fill(Color(red: 0.2, green: 0.65, blue: 0.25))
-                        .frame(width: pipeWidth + 8, height: 22)
-                        .position(x: pipe.x, y: topHeight - 11)
+                        .frame(width: pipeWidth + 8, height: 24)
+                        .position(x: pipe.x, y: topHeight - 12)
                 )
             Rectangle()
                 .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.75, blue: 0.3),
@@ -587,8 +583,8 @@ struct GameView: View {
                 .overlay(
                     Rectangle()
                         .fill(Color(red: 0.2, green: 0.65, blue: 0.25))
-                        .frame(width: pipeWidth + 8, height: 22)
-                        .position(x: pipe.x, y: bottomY + 11)
+                        .frame(width: pipeWidth + 8, height: 24)
+                        .position(x: pipe.x, y: bottomY + 12)
                 )
         }
     }
@@ -596,7 +592,7 @@ struct GameView: View {
     var startOverlay: some View {
         VStack(spacing: 12) {
             Text("First App HayrX")
-                .font(.system(size: 30, weight: .heavy, design: .rounded))
+                .font(.system(size: 32, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
                 .shadow(color: .black.opacity(0.4), radius: 3)
             Text("Тапни, чтобы птица взлетела")
@@ -606,7 +602,7 @@ struct GameView: View {
                 .font(.subheadline)
                 .foregroundColor(.white.opacity(0.85))
             Text("👆")
-                .font(.system(size: 54))
+                .font(.system(size: 58))
                 .padding(.top, 6)
         }
     }
@@ -614,7 +610,7 @@ struct GameView: View {
     var gameOverOverlay: some View {
         VStack(spacing: 14) {
             Text("Игра окончена")
-                .font(.system(size: 32, weight: .heavy, design: .rounded))
+                .font(.system(size: 34, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
             Text("Счёт: \(score)").font(.title).foregroundColor(.white)
             Text("Рекорд: \(bestScore)").font(.title3).foregroundColor(.white.opacity(0.9))
@@ -662,7 +658,7 @@ struct GameView: View {
         groundHeight: CGFloat, safeTop: CGFloat, safeBottom: CGFloat,
         birdSize: CGFloat, pipeWidth: CGFloat, gapHeight: CGFloat,
         pipeSpacing: CGFloat, pipeSpeed: CGFloat,
-        gravity: CGFloat, jumpForce: CGFloat,
+        gravity: CGFloat,
         coinSize: CGFloat, birdX: CGFloat
     ) {
         birdVelocity += gravity
@@ -698,16 +694,15 @@ struct GameView: View {
             }
         }
 
-        if let last = pipes.last {
-            if last.x < screenW - pipeSpacing {
-                spawnPipe(
-                    screenW: screenW, screenH: screenH,
-                    safeTop: safeTop, safeBottom: safeBottom,
-                    groundHeight: groundHeight, gapHeight: gapHeight,
-                    pipeWidth: pipeWidth
-                )
-                let centerX = screenW + pipeWidth / 2 + pipeSpacing / 2
-                coins.append(Coin(x: centerX, y: last.gapY))
+        // Спавн труб — включая самую первую (баг с пустым массивом исправлен)
+        let needSpawn = pipes.isEmpty || pipes.last!.x < screenW - pipeSpacing
+        if needSpawn {
+            let minY = safeTop + gapHeight / 2 + 60
+            let maxY = screenH - groundHeight - safeBottom - gapHeight / 2 - 60
+            if minY < maxY {
+                let gapY = CGFloat.random(in: minY...maxY)
+                pipes.append(Pipe(x: screenW + pipeWidth, gapY: gapY, gapHeight: gapHeight))
+                coins.append(Coin(x: screenW + pipeWidth, y: gapY))
             }
         }
 
@@ -721,17 +716,6 @@ struct GameView: View {
                 }
             }
         }
-    }
-
-    func spawnPipe(screenW: CGFloat, screenH: CGFloat,
-                   safeTop: CGFloat, safeBottom: CGFloat,
-                   groundHeight: CGFloat, gapHeight: CGFloat,
-                   pipeWidth: CGFloat) {
-        let minY = safeTop + gapHeight / 2 + 60
-        let maxY = screenH - groundHeight - safeBottom - gapHeight / 2 - 60
-        guard minY < maxY else { return }
-        let gapY = CGFloat.random(in: minY...maxY)
-        pipes.append(Pipe(x: screenW + pipeWidth, gapY: gapY, gapHeight: gapHeight))
     }
 
     func gameOver() {
