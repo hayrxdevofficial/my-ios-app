@@ -1,5 +1,7 @@
 import SwiftUI
 
+// MARK: - Модели
+
 struct Pipe: Identifiable {
     let id = UUID()
     var x: CGFloat
@@ -8,77 +10,150 @@ struct Pipe: Identifiable {
     var passed: Bool = false
 }
 
+struct Coin: Identifiable {
+    let id = UUID()
+    var x: CGFloat
+    var y: CGFloat
+    var collected: Bool = false
+}
+
+struct Skin: Identifiable, Equatable {
+    let id: String
+    let name: String
+    let price: Int
+}
+
+let ALL_SKINS: [Skin] = [
+    Skin(id: "bird",  name: "Сунгаров ЭНЕРГИТИЧЕСКИЙ МОНСТЕР",            price: 0),
+    Skin(id: "bird1", name: "Сунгаров ЭНЕРГИТИЧЕСКИЙ МОНСТЕР ФИОЛЕТОВЫЙ", price: 20)
+]
+
 enum AppScreen {
     case menu
     case game
+    case skins
 }
 
+// MARK: - Стор (глобальное состояние игры)
+
+final class GameStore: ObservableObject {
+    @Published var coins: Int {
+        didSet { UserDefaults.standard.set(coins, forKey: "coins") }
+    }
+    @Published var ownedSkins: [String] {
+        didSet { UserDefaults.standard.set(ownedSkins, forKey: "ownedSkins") }
+    }
+    @Published var selectedSkin: String {
+        didSet { UserDefaults.standard.set(selectedSkin, forKey: "selectedSkin") }
+    }
+
+    init() {
+        self.coins = UserDefaults.standard.integer(forKey: "coins")
+        self.ownedSkins = UserDefaults.standard.stringArray(forKey: "ownedSkins") ?? ["bird"]
+        self.selectedSkin = UserDefaults.standard.string(forKey: "selectedSkin") ?? "bird"
+    }
+
+    func buy(_ skin: Skin) -> Bool {
+        guard !ownedSkins.contains(skin.id) else { return false }
+        guard coins >= skin.price else { return false }
+        coins -= skin.price
+        ownedSkins.append(skin.id)
+        return true
+    }
+
+    func select(_ skin: Skin) {
+        guard ownedSkins.contains(skin.id) else { return }
+        selectedSkin = skin.id
+    }
+}
+
+// MARK: - Корень
+
 struct ContentView: View {
+    @StateObject private var store = GameStore()
     @State private var screen: AppScreen = .menu
 
     var body: some View {
         ZStack {
-            if screen == .menu {
-                MainMenuView(onStart: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        screen = .game
-                    }
-                })
+            switch screen {
+            case .menu:
+                MainMenuView(
+                    store: store,
+                    onStart: { withAnimation(.easeInOut(duration: 0.3)) { screen = .game } },
+                    onSkins: { withAnimation(.easeInOut(duration: 0.3)) { screen = .skins } }
+                )
                 .transition(.opacity)
-            } else {
-                GameView(onExitToMenu: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        screen = .menu
-                    }
-                })
+            case .game:
+                GameView(
+                    store: store,
+                    onExitToMenu: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
+                )
+                .transition(.opacity)
+            case .skins:
+                SkinsView(
+                    store: store,
+                    onBack: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
+                )
                 .transition(.opacity)
             }
         }
-        .preferredColorScheme(.dark)
+        .environmentObject(store)
     }
 }
 
 // MARK: - Главное меню
-struct MainMenuView: View {
-    let onStart: () -> Void
 
-    @State private var rotation: Double = -8
-    @State private var bobOffset: CGFloat = 0
+struct MainMenuView: View {
+    @ObservedObject var store: GameStore
+    let onStart: () -> Void
+    let onSkins: () -> Void
 
     var body: some View {
         GeometryReader { geo in
             let safeTop = geo.safeAreaInsets.top
             let safeBottom = geo.safeAreaInsets.bottom
+            let w = geo.size.width
+            let h = geo.size.height
 
             ZStack {
-                // Фон
                 LinearGradient(
                     colors: [Color(red: 0.45, green: 0.78, blue: 0.98),
                              Color(red: 0.75, green: 0.92, blue: 1.0)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                    startPoint: .top, endPoint: .bottom
+                ).ignoresSafeArea()
 
-                // Земля (учитываем нижний индикатор)
                 VStack {
                     Spacer()
                     Rectangle()
                         .fill(Color(red: 0.55, green: 0.85, blue: 0.35))
-                        .frame(height: 90 + safeBottom)
+                        .frame(height: 80 + safeBottom)
                         .overlay(
                             Rectangle()
                                 .fill(Color(red: 0.45, green: 0.75, blue: 0.25))
                                 .frame(height: 14),
                             alignment: .top
                         )
-                }
-                .ignoresSafeArea()
+                }.ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    Spacer().frame(height: safeTop + 20)
+                    // Шапка: монеты
+                    HStack {
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Image(systemName: "circle.fill")
+                                .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
+                            Text("\(store.coins)")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(20)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, safeTop + 8)
 
-                    // Название
                     VStack(spacing: 4) {
                         Text("Sungarov")
                             .font(.system(size: 44, weight: .heavy, design: .rounded))
@@ -93,30 +168,14 @@ struct MainMenuView: View {
                             .foregroundColor(.white)
                             .shadow(color: .black.opacity(0.35), radius: 3, x: 0, y: 3)
                     }
-                    .padding(.top, 20)
+                    .padding(.top, 10)
 
                     Spacer()
 
-                    // Персонаж
-                    Image("bird")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 130, height: 130)
-                        .rotationEffect(.degrees(rotation))
-                        .offset(y: bobOffset)
-                        .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 6)
-                        .onAppear {
-                            withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-                                rotation = 8
-                            }
-                            withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
-                                bobOffset = -12
-                            }
-                        }
+                    AnimatedBird(imageName: store.selectedSkin, size: min(w, h) * 0.35)
 
                     Spacer()
 
-                    // Кнопка
                     Button(action: onStart) {
                         HStack(spacing: 10) {
                             Image(systemName: "play.fill")
@@ -125,14 +184,13 @@ struct MainMenuView: View {
                                 .font(.system(size: 24, weight: .heavy, design: .rounded))
                         }
                         .foregroundColor(.white)
-                        .frame(maxWidth: 260)
+                        .frame(maxWidth: 280)
                         .padding(.vertical, 18)
                         .background(
                             LinearGradient(
                                 colors: [Color(red: 0.98, green: 0.55, blue: 0.15),
                                          Color(red: 0.92, green: 0.35, blue: 0.05)],
-                                startPoint: .top,
-                                endPoint: .bottom
+                                startPoint: .top, endPoint: .bottom
                             )
                         )
                         .cornerRadius(20)
@@ -140,12 +198,26 @@ struct MainMenuView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // Рекорд
+                    Button(action: onSkins) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "paintpalette.fill")
+                            Text("Скины")
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: 280)
+                        .padding(.vertical, 14)
+                        .background(Color.black.opacity(0.25))
+                        .cornerRadius(16)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 10)
+
                     Text("Рекорд: \(UserDefaults.standard.integer(forKey: "bestScore"))")
                         .font(.headline)
                         .foregroundColor(.white.opacity(0.9))
                         .shadow(color: .black.opacity(0.3), radius: 2)
-                        .padding(.top, 20)
+                        .padding(.top, 16)
 
                     Spacer().frame(height: safeBottom + 40)
                 }
@@ -155,49 +227,220 @@ struct MainMenuView: View {
     }
 }
 
+// MARK: - Экран скинов
+
+struct SkinsView: View {
+    @ObservedObject var store: GameStore
+    let onBack: () -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            let safeTop = geo.safeAreaInsets.top
+            let safeBottom = geo.safeAreaInsets.bottom
+
+            ZStack {
+                LinearGradient(
+                    colors: [Color(red: 0.15, green: 0.18, blue: 0.28),
+                             Color(red: 0.08, green: 0.10, blue: 0.18)],
+                    startPoint: .top, endPoint: .bottom
+                ).ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    HStack {
+                        Button(action: onBack) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 20, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(12)
+                                .background(Color.white.opacity(0.15))
+                                .clipShape(Circle())
+                        }
+                        Spacer()
+                        Text("Скины")
+                            .font(.system(size: 24, weight: .heavy, design: .rounded))
+                            .foregroundColor(.white)
+                        Spacer()
+                        HStack(spacing: 6) {
+                            Image(systemName: "circle.fill")
+                                .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
+                            Text("\(store.coins)")
+                                .font(.system(size: 16, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.black.opacity(0.3))
+                        .cornerRadius(16)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, safeTop + 8)
+
+                    ScrollView {
+                        VStack(spacing: 14) {
+                            ForEach(ALL_SKINS) { skin in
+                                SkinRow(skin: skin, store: store)
+                            }
+                        }
+                        .padding(16)
+                    }
+
+                    Spacer().frame(height: safeBottom)
+                }
+            }
+        }
+        .statusBarHidden(true)
+    }
+}
+
+struct SkinRow: View {
+    let skin: Skin
+    @ObservedObject var store: GameStore
+
+    var isOwned: Bool { store.ownedSkins.contains(skin.id) }
+    var isSelected: Bool { store.selectedSkin == skin.id }
+    var canAfford: Bool { store.coins >= skin.price }
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(skin.id)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 72, height: 72)
+                .padding(8)
+                .background(Color.white.opacity(0.08))
+                .cornerRadius(14)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(skin.name)
+                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if isOwned {
+                    Text(isSelected ? "Выбран" : "Куплен")
+                        .font(.caption)
+                        .foregroundColor(isSelected ? .green : .gray)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "circle.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
+                        Text("\(skin.price)")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white.opacity(0.85))
+                    }
+                }
+            }
+
+            Spacer()
+
+            if isOwned {
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.green)
+                } else {
+                    Button { store.select(skin) } label: {
+                        Text("Выбрать")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .background(Color.blue)
+                            .cornerRadius(12)
+                    }
+                }
+            } else {
+                Button {
+                    _ = store.buy(skin)
+                } label: {
+                    Text("Купить")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(canAfford ? Color.orange : Color.gray)
+                        .cornerRadius(12)
+                }
+                .disabled(!canAfford)
+            }
+        }
+        .padding(14)
+        .background(Color.white.opacity(0.05))
+        .cornerRadius(18)
+    }
+}
+
+// MARK: - Анимированный персонаж (изолирован, анимация не «протекает»)
+
+struct AnimatedBird: View {
+    let imageName: String
+    let size: CGFloat
+    @State private var rotated = false
+    @State private var bobbed = false
+
+    var body: some View {
+        Image(imageName)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .rotationEffect(.degrees(rotated ? 8 : -8))
+            .offset(y: bobbed ? -14 : 0)
+            .shadow(color: .black.opacity(0.3), radius: 8, x: 0, y: 6)
+            .animation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true), value: rotated)
+            .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: bobbed)
+            .onAppear {
+                rotated = true
+                bobbed = true
+            }
+    }
+}
+
 // MARK: - Игра
+
 struct GameView: View {
+    @ObservedObject var store: GameStore
     let onExitToMenu: () -> Void
 
     @State private var birdY: CGFloat = 0
     @State private var birdVelocity: CGFloat = 0
     @State private var pipes: [Pipe] = []
+    @State private var coins: [Coin] = []
     @State private var score: Int = 0
+    @State private var earnedCoins: Int = 0
     @State private var bestScore: Int = UserDefaults.standard.integer(forKey: "bestScore")
     @State private var isGameOver: Bool = false
     @State private var isStarted: Bool = false
-    @State private var screenWidth: CGFloat = 375
-    @State private var screenHeight: CGFloat = 812
-    @State private var safeTop: CGFloat = 44
-    @State private var safeBottom: CGFloat = 34
 
     let timer = Timer.publish(every: 1.0 / 60.0, on: .main, in: .common).autoconnect()
-
-    let gravity: CGFloat = 0.55
-    let jumpForce: CGFloat = -10.5
-    let pipeSpeed: CGFloat = 2.4
-    let birdSize: CGFloat = 38
-    let pipeWidth: CGFloat = 68
-    let gapHeight: CGFloat = 190
-    let pipeSpacing: CGFloat = 210
-    let groundHeight: CGFloat = 80
 
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
+            let safeTop = geo.safeAreaInsets.top
+            let safeBottom = geo.safeAreaInsets.bottom
+
+            let groundHeight: CGFloat = h * 0.09
+            let birdSize: CGFloat = w * 0.12
+            let pipeWidth: CGFloat = w * 0.20
+            let gapHeight: CGFloat = h * 0.26
+            let pipeSpacing: CGFloat = w * 0.68
+            let pipeSpeed: CGFloat = w * 0.0070
+            let gravity: CGFloat = h * 0.00085
+            let jumpForce: CGFloat = -h * 0.0145
+            let coinSize: CGFloat = w * 0.085
+            let birdX = w * 0.28
 
             ZStack {
-                // Фон
                 LinearGradient(
                     colors: [Color(red: 0.45, green: 0.78, blue: 0.98),
                              Color(red: 0.75, green: 0.92, blue: 1.0)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .ignoresSafeArea()
+                    startPoint: .top, endPoint: .bottom
+                ).ignoresSafeArea()
 
-                // Земля
                 VStack {
                     Spacer()
                     Rectangle()
@@ -209,27 +452,45 @@ struct GameView: View {
                                 .frame(height: 12),
                             alignment: .top
                         )
-                }
-                .ignoresSafeArea()
+                }.ignoresSafeArea()
 
-                // Трубы
                 ForEach(pipes) { pipe in
-                    pipeView(pipe: pipe, screenHeight: h)
+                    pipeView(
+                        pipe: pipe, screenHeight: h,
+                        pipeWidth: pipeWidth, gapHeight: gapHeight,
+                        groundHeight: groundHeight, safeBottom: safeBottom
+                    )
                 }
 
-                // Птица
-                Image("bird")
+                ForEach(coins) { coin in
+                    if !coin.collected {
+                        ZStack {
+                            Circle()
+                                .fill(Color(red: 1.0, green: 0.85, blue: 0.2))
+                                .frame(width: coinSize, height: coinSize)
+                                .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
+                            Circle()
+                                .stroke(Color(red: 0.9, green: 0.65, blue: 0.05), lineWidth: 3)
+                                .frame(width: coinSize, height: coinSize)
+                            Image(systemName: "star.fill")
+                                .font(.system(size: coinSize * 0.45))
+                                .foregroundColor(Color(red: 1.0, green: 0.95, blue: 0.5))
+                        }
+                        .position(x: coin.x, y: coin.y)
+                    }
+                }
+
+                Image(store.selectedSkin)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: birdSize, height: birdSize)
                     .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
                     .rotationEffect(.degrees(Double(birdVelocity) * 2))
-                    .position(x: w * 0.28, y: birdY)
+                    .position(x: birdX, y: birdY)
 
-                // Счёт вверху (под чёлкой)
                 VStack {
                     Text("\(score)")
-                        .font(.system(size: 60, weight: .heavy, design: .rounded))
+                        .font(.system(size: 64, weight: .heavy, design: .rounded))
                         .foregroundColor(.white)
                         .shadow(color: .black.opacity(0.4), radius: 2, x: 0, y: 2)
                         .padding(.top, safeTop + 8)
@@ -237,10 +498,23 @@ struct GameView: View {
                         .font(.headline)
                         .foregroundColor(.white.opacity(0.9))
                         .shadow(color: .black.opacity(0.3), radius: 2)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "circle.fill")
+                            .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
+                        Text("\(earnedCoins)")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.black.opacity(0.3))
+                    .cornerRadius(16)
+                    .padding(.top, 8)
+
                     Spacer()
                 }
 
-                // Кнопка назад (только до старта)
                 if !isStarted && !isGameOver {
                     VStack {
                         HStack {
@@ -260,28 +534,24 @@ struct GameView: View {
                     }
                 }
 
-                if !isStarted && !isGameOver {
-                    startOverlay(safeTop: safeTop, safeBottom: safeBottom)
-                }
-
-                if isGameOver {
-                    gameOverOverlay
-                }
+                if !isStarted && !isGameOver { startOverlay }
+                if isGameOver { gameOverOverlay }
             }
             .contentShape(Rectangle())
-            .onTapGesture {
-                handleTap()
-            }
+            .onTapGesture { handleTap() }
             .onAppear {
-                screenWidth = w
-                screenHeight = h
-                safeTop = geo.safeAreaInsets.top
-                safeBottom = geo.safeAreaInsets.bottom
                 birdY = (h - groundHeight) * 0.5
             }
             .onReceive(timer) { _ in
                 if isStarted && !isGameOver {
-                    updateGame()
+                    updateGame(
+                        screenW: w, screenH: h,
+                        groundHeight: groundHeight, safeTop: safeTop, safeBottom: safeBottom,
+                        birdSize: birdSize, pipeWidth: pipeWidth, gapHeight: gapHeight,
+                        pipeSpacing: pipeSpacing, pipeSpeed: pipeSpeed,
+                        gravity: gravity, jumpForce: jumpForce,
+                        coinSize: coinSize, birdX: birdX
+                    )
                 }
             }
         }
@@ -289,14 +559,13 @@ struct GameView: View {
         .statusBarHidden(true)
     }
 
-    // MARK: - Труба
-    func pipeView(pipe: Pipe, screenHeight: CGFloat) -> some View {
+    func pipeView(pipe: Pipe, screenHeight: CGFloat, pipeWidth: CGFloat,
+                  gapHeight: CGFloat, groundHeight: CGFloat, safeBottom: CGFloat) -> some View {
         let topHeight = max(0, pipe.gapY - gapHeight / 2)
         let bottomY = pipe.gapY + gapHeight / 2
         let bottomHeight = max(0, screenHeight - bottomY - groundHeight - safeBottom)
 
         return ZStack {
-            // Верхняя
             Rectangle()
                 .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.75, blue: 0.3),
                                               Color(red: 0.15, green: 0.55, blue: 0.2)],
@@ -309,8 +578,6 @@ struct GameView: View {
                         .frame(width: pipeWidth + 8, height: 22)
                         .position(x: pipe.x, y: topHeight - 11)
                 )
-
-            // Нижняя
             Rectangle()
                 .fill(LinearGradient(colors: [Color(red: 0.25, green: 0.75, blue: 0.3),
                                               Color(red: 0.15, green: 0.55, blue: 0.2)],
@@ -326,8 +593,7 @@ struct GameView: View {
         }
     }
 
-    // MARK: - Оверлеи
-    func startOverlay(safeTop: CGFloat, safeBottom: CGFloat) -> some View {
+    var startOverlay: some View {
         VStack(spacing: 12) {
             Text("First App HayrX")
                 .font(.system(size: 30, weight: .heavy, design: .rounded))
@@ -336,9 +602,12 @@ struct GameView: View {
             Text("Тапни, чтобы птица взлетела")
                 .font(.headline)
                 .foregroundColor(.white.opacity(0.9))
+            Text("Собирай монетки! 🪙")
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.85))
             Text("👆")
                 .font(.system(size: 54))
-                .padding(.top, 10)
+                .padding(.top, 6)
         }
     }
 
@@ -347,16 +616,18 @@ struct GameView: View {
             Text("Игра окончена")
                 .font(.system(size: 32, weight: .heavy, design: .rounded))
                 .foregroundColor(.white)
-            Text("Счёт: \(score)")
-                .font(.title)
-                .foregroundColor(.white)
-            Text("Рекорд: \(bestScore)")
-                .font(.title3)
-                .foregroundColor(.white.opacity(0.9))
+            Text("Счёт: \(score)").font(.title).foregroundColor(.white)
+            Text("Рекорд: \(bestScore)").font(.title3).foregroundColor(.white.opacity(0.9))
 
-            Button {
-                restart()
-            } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "circle.fill")
+                    .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
+                Text("+\(earnedCoins) монет")
+                    .font(.headline)
+                    .foregroundColor(.white)
+            }
+
+            Button { restart() } label: {
                 Text("Играть снова")
                     .font(.headline)
                     .padding(.horizontal, 32)
@@ -382,67 +653,85 @@ struct GameView: View {
     // MARK: - Логика
     func handleTap() {
         if isGameOver { return }
-        if !isStarted {
-            isStarted = true
-            spawnPipe()
-        }
-        birdVelocity = jumpForce
+        if !isStarted { isStarted = true }
+        birdVelocity = -12
     }
 
-    func updateGame() {
+    func updateGame(
+        screenW: CGFloat, screenH: CGFloat,
+        groundHeight: CGFloat, safeTop: CGFloat, safeBottom: CGFloat,
+        birdSize: CGFloat, pipeWidth: CGFloat, gapHeight: CGFloat,
+        pipeSpacing: CGFloat, pipeSpeed: CGFloat,
+        gravity: CGFloat, jumpForce: CGFloat,
+        coinSize: CGFloat, birdX: CGFloat
+    ) {
         birdVelocity += gravity
         birdY += birdVelocity
 
-        // Столкновение с землёй
-        if birdY > screenHeight - groundHeight - safeBottom - birdSize / 2 {
-            gameOver()
-            return
+        if birdY > screenH - groundHeight - safeBottom - birdSize / 2 {
+            gameOver(); return
         }
-        // Потолок
         if birdY < safeTop + birdSize / 2 {
             birdY = safeTop + birdSize / 2
             birdVelocity = 0
         }
 
-        for i in pipes.indices {
-            pipes[i].x -= pipeSpeed
-        }
+        for i in pipes.indices { pipes[i].x -= pipeSpeed }
+        for i in coins.indices { coins[i].x -= pipeSpeed }
 
         pipes = pipes.filter { $0.x > -pipeWidth }
+        coins = coins.filter { $0.x > -coinSize }
 
         for i in pipes.indices {
-            if !pipes[i].passed && pipes[i].x + pipeWidth / 2 < screenWidth * 0.28 {
+            if !pipes[i].passed && pipes[i].x + pipeWidth / 2 < birdX {
                 pipes[i].passed = true
                 score += 1
             }
         }
 
-        if let last = pipes.last {
-            if last.x < screenWidth - pipeSpacing {
-                spawnPipe()
+        for i in coins.indices where !coins[i].collected {
+            let dx = abs(birdX - coins[i].x)
+            let dy = abs(birdY - coins[i].y)
+            if dx < (birdSize / 2 + coinSize / 2) && dy < (birdSize / 2 + coinSize / 2) {
+                coins[i].collected = true
+                earnedCoins += 1
             }
         }
 
-        // Столкновение с трубами
-        let birdX = screenWidth * 0.28
+        if let last = pipes.last {
+            if last.x < screenW - pipeSpacing {
+                spawnPipe(
+                    screenW: screenW, screenH: screenH,
+                    safeTop: safeTop, safeBottom: safeBottom,
+                    groundHeight: groundHeight, gapHeight: gapHeight,
+                    pipeWidth: pipeWidth
+                )
+                let centerX = screenW + pipeWidth / 2 + pipeSpacing / 2
+                coins.append(Coin(x: centerX, y: last.gapY))
+            }
+        }
+
         for pipe in pipes {
             let dx = abs(birdX - pipe.x)
             if dx < (pipeWidth / 2 + birdSize / 2 - 6) {
                 let topY = pipe.gapY - gapHeight / 2
                 let bottomY = pipe.gapY + gapHeight / 2
                 if birdY - birdSize / 2 < topY || birdY + birdSize / 2 > bottomY {
-                    gameOver()
-                    return
+                    gameOver(); return
                 }
             }
         }
     }
 
-    func spawnPipe() {
+    func spawnPipe(screenW: CGFloat, screenH: CGFloat,
+                   safeTop: CGFloat, safeBottom: CGFloat,
+                   groundHeight: CGFloat, gapHeight: CGFloat,
+                   pipeWidth: CGFloat) {
         let minY = safeTop + gapHeight / 2 + 60
-        let maxY = screenHeight - groundHeight - safeBottom - gapHeight / 2 - 60
+        let maxY = screenH - groundHeight - safeBottom - gapHeight / 2 - 60
+        guard minY < maxY else { return }
         let gapY = CGFloat.random(in: minY...maxY)
-        pipes.append(Pipe(x: screenWidth + pipeWidth, gapY: gapY, gapHeight: gapHeight))
+        pipes.append(Pipe(x: screenW + pipeWidth, gapY: gapY, gapHeight: gapHeight))
     }
 
     func gameOver() {
@@ -452,13 +741,16 @@ struct GameView: View {
             bestScore = score
             UserDefaults.standard.set(bestScore, forKey: "bestScore")
         }
+        store.coins += earnedCoins
     }
 
     func restart() {
         score = 0
+        earnedCoins = 0
         pipes = []
+        coins = []
         birdVelocity = 0
-        birdY = (screenHeight - groundHeight - safeBottom) * 0.5
+        birdY = 0
         isGameOver = false
         isStarted = false
     }
