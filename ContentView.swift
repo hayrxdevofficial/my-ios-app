@@ -34,6 +34,18 @@ enum AppScreen {
     case skins
 }
 
+// MARK: - Мод-настройки
+
+final class ModSettings: ObservableObject {
+    @Published var godMode: Bool = false      // бессмертие
+    @Published var slowMo: Bool = false       // замедление труб
+    @Published var autoPlay: Bool = false     // автопилот
+    @Published var megaGap: Bool = false      // огромные проходы
+    @Published var coinRain: Bool = false     // дождь из монет
+
+    var anyActive: Bool { godMode || slowMo || autoPlay || megaGap || coinRain }
+}
+
 // MARK: - Стор
 
 final class GameStore: ObservableObject {
@@ -71,7 +83,9 @@ final class GameStore: ObservableObject {
 
 struct ContentView: View {
     @StateObject private var store = GameStore()
+    @StateObject private var mods = ModSettings()
     @State private var screen: AppScreen = .menu
+    @State private var modOpen: Bool = false
 
     var body: some View {
         ZStack {
@@ -80,24 +94,207 @@ struct ContentView: View {
                 MainMenuView(
                     store: store,
                     onStart: { withAnimation(.easeInOut(duration: 0.3)) { screen = .game } },
-                    onSkins: { withAnimation(.easeInOut(duration: 0.3)) { screen = .skins } }
+                    onSkins: { withAnimation(.easeInOut(duration: 0.3)) { screen = .skins } },
+                    onOpenMods: { modOpen = true }
                 )
                 .transition(.opacity)
             case .game:
                 GameView(
                     store: store,
+                    mods: mods,
+                    isModOpen: $modOpen,
                     onExitToMenu: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
                 )
                 .transition(.opacity)
             case .skins:
                 SkinsView(
                     store: store,
-                    onBack: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
+                    onBack: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } },
+                    onOpenMods: { modOpen = true }
                 )
                 .transition(.opacity)
             }
+
+            if modOpen {
+                ModMenuView(mods: mods, store: store, onClose: { modOpen = false })
+                    .transition(.opacity)
+                    .zIndex(10)
+            }
         }
         .environmentObject(store)
+    }
+}
+
+// MARK: - Мод-кнопка
+
+struct ModButton: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: "hammer.fill")
+                    .font(.system(size: 12, weight: .bold))
+                Text("MOD")
+                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .tracking(1)
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 11)
+            .padding(.vertical, 7)
+            .background(
+                LinearGradient(
+                    colors: [.purple, .pink],
+                    startPoint: .leading, endPoint: .trailing
+                )
+            )
+            .cornerRadius(11)
+            .shadow(color: .black.opacity(0.35), radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Мод-меню
+
+struct ModMenuView: View {
+    @ObservedObject var mods: ModSettings
+    @ObservedObject var store: GameStore
+    var onClose: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.72).ignoresSafeArea()
+                .onTapGesture { onClose() }
+
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("🛠 МОД-МЕНЮ")
+                            .font(.system(size: 20, weight: .heavy, design: .rounded))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Button(action: onClose) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.white.opacity(0.85))
+                        }
+                    }
+
+                    Divider().background(Color.white.opacity(0.2))
+
+                    ModToggle(title: "🛡 Бессмертие",
+                              subtitle: "Птица не умирает",
+                              isOn: $mods.godMode)
+
+                    ModToggle(title: "🐢 Замедление",
+                              subtitle: "Трубы едут медленнее",
+                              isOn: $mods.slowMo)
+
+                    ModToggle(title: "🤖 Автопилот",
+                              subtitle: "Птица летит сама",
+                              isOn: $mods.autoPlay)
+
+                    ModToggle(title: "📏 Огромные проходы",
+                              subtitle: "Больше места в трубах",
+                              isOn: $mods.megaGap)
+
+                    ModToggle(title: "✨ Дождь из монет",
+                              subtitle: "Больше монет в игре",
+                              isOn: $mods.coinRain)
+
+                    Divider().background(Color.white.opacity(0.2))
+
+                    HStack(spacing: 10) {
+                        ModActionButton(title: "+100 🪙", color: .green) {
+                            store.coins += 100
+                        }
+                        ModActionButton(title: "+1000 🪙", color: .green) {
+                            store.coins += 1000
+                        }
+                    }
+
+                    ModActionButton(title: "🔓 Разблокировать все скины", color: .blue) {
+                        for skin in ALL_SKINS where !store.ownedSkins.contains(skin.id) {
+                            store.ownedSkins.append(skin.id)
+                        }
+                    }
+
+                    ModActionButton(title: "🔄 Сбросить прогресс", color: .red) {
+                        store.coins = 0
+                        store.ownedSkins = ["bird"]
+                        store.selectedSkin = "bird"
+                        UserDefaults.standard.set(0, forKey: "bestScore")
+                    }
+
+                    Text("Твой баланс: \(store.coins) 🪙")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.7))
+                        .padding(.top, 4)
+                }
+                .padding(18)
+            }
+            .frame(maxWidth: 400)
+            .frame(maxHeight: 640)
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.14, green: 0.14, blue: 0.22),
+                             Color(red: 0.08, green: 0.08, blue: 0.14)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 22)
+                    .stroke(Color.purple.opacity(0.5), lineWidth: 1)
+            )
+            .cornerRadius(22)
+            .padding(24)
+        }
+    }
+}
+
+struct ModToggle: View {
+    let title: String
+    let subtitle: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white)
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundColor(.white.opacity(0.55))
+            }
+            Spacer()
+            Toggle("", isOn: $isOn)
+                .labelsHidden()
+                .tint(.purple)
+        }
+        .padding(12)
+        .background(Color.white.opacity(0.06))
+        .cornerRadius(12)
+    }
+}
+
+struct ModActionButton: View {
+    let title: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(title)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(color.opacity(0.85))
+                .cornerRadius(12)
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -107,6 +304,7 @@ struct MainMenuView: View {
     @ObservedObject var store: GameStore
     let onStart: () -> Void
     let onSkins: () -> Void
+    let onOpenMods: () -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -137,6 +335,7 @@ struct MainMenuView: View {
 
                 VStack(spacing: 0) {
                     HStack {
+                        ModButton(action: onOpenMods)
                         Spacer()
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
@@ -231,6 +430,7 @@ struct MainMenuView: View {
 struct SkinsView: View {
     @ObservedObject var store: GameStore
     let onBack: () -> Void
+    let onOpenMods: () -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -259,6 +459,7 @@ struct SkinsView: View {
                             .font(.system(size: 24, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                         Spacer()
+                        ModButton(action: onOpenMods)
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
                                 .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
@@ -398,6 +599,8 @@ struct AnimatedBird: View {
 
 struct GameView: View {
     @ObservedObject var store: GameStore
+    @ObservedObject var mods: ModSettings
+    @Binding var isModOpen: Bool
     let onExitToMenu: () -> Void
 
     @State private var birdY: CGFloat = 0
@@ -419,16 +622,19 @@ struct GameView: View {
             let safeTop = geo.safeAreaInsets.top
             let safeBottom = geo.safeAreaInsets.bottom
 
-            // Размеры — крупнее, игра сложнее
             let groundHeight: CGFloat = h * 0.09
             let birdSize: CGFloat = w * 0.13
             let pipeWidth: CGFloat = w * 0.22
-            let gapHeight: CGFloat = h * 0.25
+            let baseGapHeight: CGFloat = h * 0.25
             let pipeSpacing: CGFloat = w * 0.72
-            let pipeSpeed: CGFloat = w * 0.0066
+            let basePipeSpeed: CGFloat = w * 0.0066
             let gravity: CGFloat = h * 0.00092
             let coinSize: CGFloat = w * 0.10
             let birdX = w * 0.28
+
+            // Модификаторы
+            let gapHeight = mods.megaGap ? baseGapHeight * 1.7 : baseGapHeight
+            let pipeSpeed = mods.slowMo ? basePipeSpeed * 0.45 : basePipeSpeed
 
             ZStack {
                 LinearGradient(
@@ -483,8 +689,20 @@ struct GameView: View {
                     .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
                     .rotationEffect(.degrees(Double(birdVelocity) * 2))
                     .position(x: birdX, y: birdY)
+                    // Аура бессмертия
+                    .overlay(
+                        Group {
+                            if mods.godMode {
+                                Circle()
+                                    .stroke(Color.cyan.opacity(0.8), lineWidth: 2)
+                                    .frame(width: birdSize * 1.05, height: birdSize * 1.05)
+                                    .blur(radius: 1.5)
+                                    .position(x: birdX, y: birdY)
+                            }
+                        }
+                    )
 
-                // HUD — опущен ниже, чтобы не мешала чёлка
+                // HUD
                 VStack {
                     Text("\(score)")
                         .font(.system(size: 64, weight: .heavy, design: .rounded))
@@ -512,9 +730,10 @@ struct GameView: View {
                     Spacer()
                 }
 
-                if !isStarted && !isGameOver {
-                    VStack {
-                        HStack {
+                // Верхние угловые кнопки
+                VStack {
+                    HStack {
+                        if !isStarted && !isGameOver {
                             Button(action: onExitToMenu) {
                                 Image(systemName: "house.fill")
                                     .font(.system(size: 18, weight: .bold))
@@ -523,12 +742,15 @@ struct GameView: View {
                                     .background(Color.black.opacity(0.3))
                                     .clipShape(Circle())
                             }
-                            .padding(.leading, 16)
-                            Spacer()
                         }
-                        .padding(.top, safeTop + 24)
                         Spacer()
+                        if !isGameOver {
+                            ModButton { isModOpen = true }
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, safeTop + 24)
+                    Spacer()
                 }
 
                 if !isStarted && !isGameOver { startOverlay }
@@ -540,7 +762,7 @@ struct GameView: View {
                 birdY = (h - groundHeight) * 0.5
             }
             .onReceive(timer) { _ in
-                if isStarted && !isGameOver {
+                if isStarted && !isGameOver && !isModOpen {
                     updateGame(
                         screenW: w, screenH: h,
                         groundHeight: groundHeight, safeTop: safeTop, safeBottom: safeBottom,
@@ -648,7 +870,9 @@ struct GameView: View {
     }
 
     // MARK: - Логика
+
     func handleTap() {
+        if isModOpen { return }
         if isGameOver { return }
         if !isStarted { isStarted = true }
         birdVelocity = -11.5
@@ -665,9 +889,26 @@ struct GameView: View {
         birdVelocity += gravity
         birdY += birdVelocity
 
-        if birdY > screenH - groundHeight - safeBottom - birdSize / 2 {
-            gameOver(); return
+        // Автопилот
+        if mods.autoPlay {
+            let nextPipe = pipes.first(where: { $0.x + pipeWidth / 2 > birdX })
+            let targetY = nextPipe?.gapY ?? (screenH * 0.45)
+            if birdY > targetY + 10 {
+                birdVelocity = -8.5
+            }
         }
+
+        // Земля
+        if birdY > screenH - groundHeight - safeBottom - birdSize / 2 {
+            if mods.godMode {
+                birdY = screenH - groundHeight - safeBottom - birdSize / 2
+                birdVelocity = 0
+            } else {
+                gameOver(); return
+            }
+        }
+
+        // Потолок
         if birdY < safeTop + birdSize / 2 {
             birdY = safeTop + birdSize / 2
             birdVelocity = 0
@@ -695,7 +936,7 @@ struct GameView: View {
             }
         }
 
-        // Спавн труб — включая самую первую
+        // Спавн труб
         let needSpawn = pipes.isEmpty || pipes.last!.x < screenW - pipeSpacing
         if needSpawn {
             let minY = safeTop + gapHeight / 2 + 50
@@ -704,16 +945,32 @@ struct GameView: View {
                 let gapY = CGFloat.random(in: minY...maxY)
                 pipes.append(Pipe(x: screenW + pipeWidth, gapY: gapY, gapHeight: gapHeight))
                 coins.append(Coin(x: screenW + pipeWidth, y: gapY))
+
+                // Дождь из монет
+                if mods.coinRain {
+                    let topLimit = safeTop + 60
+                    let bottomLimit = screenH - groundHeight - safeBottom - 60
+                    if topLimit < bottomLimit {
+                        for _ in 0..<2 {
+                            let cy = CGFloat.random(in: topLimit...bottomLimit)
+                            let cx = screenW + pipeWidth + CGFloat.random(in: -30...30)
+                            coins.append(Coin(x: cx, y: cy))
+                        }
+                    }
+                }
             }
         }
 
-        for pipe in pipes {
-            let dx = abs(birdX - pipe.x)
-            if dx < (pipeWidth / 2 + birdSize / 2 - 6) {
-                let topY = pipe.gapY - gapHeight / 2
-                let bottomY = pipe.gapY + gapHeight / 2
-                if birdY - birdSize / 2 < topY || birdY + birdSize / 2 > bottomY {
-                    gameOver(); return
+        // Столкновение с трубами
+        if !mods.godMode {
+            for pipe in pipes {
+                let dx = abs(birdX - pipe.x)
+                if dx < (pipeWidth / 2 + birdSize / 2 - 6) {
+                    let topY = pipe.gapY - gapHeight / 2
+                    let bottomY = pipe.gapY + gapHeight / 2
+                    if birdY - birdSize / 2 < topY || birdY + birdSize / 2 > bottomY {
+                        gameOver(); return
+                    }
                 }
             }
         }
