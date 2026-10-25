@@ -86,72 +86,140 @@ struct ContentView: View {
     @StateObject private var mods = ModSettings()
     @State private var screen: AppScreen = .menu
     @State private var modOpen: Bool = false
+    @State private var modButtonPos: CGPoint = .zero
+    @State private var didInitButton: Bool = false
 
     var body: some View {
-        ZStack {
-            switch screen {
-            case .menu:
-                MainMenuView(
-                    store: store,
-                    onStart: { withAnimation(.easeInOut(duration: 0.3)) { screen = .game } },
-                    onSkins: { withAnimation(.easeInOut(duration: 0.3)) { screen = .skins } },
-                    onOpenMods: { modOpen = true }
-                )
-                .transition(.opacity)
-            case .game:
-                GameView(
-                    store: store,
-                    mods: mods,
-                    isModOpen: $modOpen,
-                    onExitToMenu: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
-                )
-                .transition(.opacity)
-            case .skins:
-                SkinsView(
-                    store: store,
-                    onBack: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } },
-                    onOpenMods: { modOpen = true }
-                )
-                .transition(.opacity)
-            }
-
-            if modOpen {
-                ModMenuView(mods: mods, store: store, onClose: { modOpen = false })
+        GeometryReader { geo in
+            ZStack {
+                switch screen {
+                case .menu:
+                    MainMenuView(
+                        store: store,
+                        onStart: { withAnimation(.easeInOut(duration: 0.3)) { screen = .game } },
+                        onSkins: { withAnimation(.easeInOut(duration: 0.3)) { screen = .skins } }
+                    )
                     .transition(.opacity)
-                    .zIndex(10)
+                case .game:
+                    GameView(
+                        store: store,
+                        mods: mods,
+                        isModOpen: $modOpen,
+                        onExitToMenu: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
+                    )
+                    .transition(.opacity)
+                case .skins:
+                    SkinsView(
+                        store: store,
+                        onBack: { withAnimation(.easeInOut(duration: 0.3)) { screen = .menu } }
+                    )
+                    .transition(.opacity)
+                }
+
+                if modOpen {
+                    ModMenuView(mods: mods, store: store, onClose: { modOpen = false })
+                        .transition(.opacity)
+                        .zIndex(20)
+                }
+
+                if !modOpen {
+                    DraggableModButton(
+                        position: $modButtonPos,
+                        onTap: { modOpen = true }
+                    )
+                    .zIndex(15)
+                }
+            }
+            .onAppear {
+                if !didInitButton && geo.size.width > 0 {
+                    modButtonPos = CGPoint(x: geo.size.width / 2,
+                                           y: geo.size.height / 2)
+                    didInitButton = true
+                }
+            }
+            .onChange(of: geo.size) { newSize in
+                if !didInitButton && newSize.width > 0 {
+                    modButtonPos = CGPoint(x: newSize.width / 2,
+                                           y: newSize.height / 2)
+                    didInitButton = true
+                }
             }
         }
         .environmentObject(store)
     }
 }
 
-// MARK: - Мод-кнопка
+// MARK: - Плавающая перетаскиваемая кнопка MOD
 
-struct ModButton: View {
-    var action: () -> Void
+struct DraggableModButton: View {
+    @Binding var position: CGPoint
+    var onTap: () -> Void
+
+    @State private var dragOffset: CGSize = .zero
+    @State private var isDragging: Bool = false
 
     var body: some View {
-        Button(action: action) {
+        GeometryReader { geo in
+            let x = position.x + dragOffset.width
+            let y = position.y + dragOffset.height
+
             HStack(spacing: 5) {
                 Image(systemName: "hammer.fill")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                 Text("MOD")
-                    .font(.system(size: 11, weight: .heavy, design: .rounded))
+                    .font(.system(size: 12, weight: .heavy, design: .rounded))
                     .tracking(1)
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 11)
-            .padding(.vertical, 7)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
             .background(
-                LinearGradient(
-                    colors: [.purple, .pink],
-                    startPoint: .leading, endPoint: .trailing
-                )
+                LinearGradient(colors: [.purple, .pink],
+                               startPoint: .leading, endPoint: .trailing)
             )
-            .cornerRadius(11)
-            .shadow(color: .black.opacity(0.35), radius: 4, x: 0, y: 2)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color.white.opacity(0.6),
+                            lineWidth: isDragging ? 2 : 0)
+            )
+            .cornerRadius(14)
+            .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 4)
+            .scaleEffect(isDragging ? 1.15 : 1.0)
+            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragging)
+            .position(x: x, y: y)
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { value in
+                        let dx = abs(value.translation.width)
+                        let dy = abs(value.translation.height)
+                        if !isDragging && (dx > 4 || dy > 4) {
+                            isDragging = true
+                        }
+                        if isDragging {
+                            dragOffset = value.translation
+                        }
+                    }
+                    .onEnded { value in
+                        let moved = abs(value.translation.width) > 6 ||
+                                    abs(value.translation.height) > 6
+                        if moved {
+                            let newX = min(max(position.x + value.translation.width, 60),
+                                           geo.size.width - 60)
+                            let newY = min(max(position.y + value.translation.height, 60),
+                                           geo.size.height - 60)
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                position = CGPoint(x: newX, y: newY)
+                                dragOffset = .zero
+                                isDragging = false
+                            }
+                        } else {
+                            dragOffset = .zero
+                            isDragging = false
+                            onTap()
+                        }
+                    }
+            )
         }
-        .buttonStyle(.plain)
     }
 }
 
@@ -304,7 +372,6 @@ struct MainMenuView: View {
     @ObservedObject var store: GameStore
     let onStart: () -> Void
     let onSkins: () -> Void
-    let onOpenMods: () -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -335,7 +402,6 @@ struct MainMenuView: View {
 
                 VStack(spacing: 0) {
                     HStack {
-                        ModButton(action: onOpenMods)
                         Spacer()
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
@@ -430,7 +496,6 @@ struct MainMenuView: View {
 struct SkinsView: View {
     @ObservedObject var store: GameStore
     let onBack: () -> Void
-    let onOpenMods: () -> Void
 
     var body: some View {
         GeometryReader { geo in
@@ -459,7 +524,6 @@ struct SkinsView: View {
                             .font(.system(size: 24, weight: .heavy, design: .rounded))
                             .foregroundColor(.white)
                         Spacer()
-                        ModButton(action: onOpenMods)
                         HStack(spacing: 6) {
                             Image(systemName: "circle.fill")
                                 .foregroundColor(Color(red: 1.0, green: 0.85, blue: 0.2))
@@ -573,7 +637,7 @@ struct SkinRow: View {
     }
 }
 
-// MARK: - Анимированный персонаж (крутится на месте)
+// MARK: - Анимированный персонаж
 
 struct AnimatedBird: View {
     let imageName: String
@@ -632,7 +696,6 @@ struct GameView: View {
             let coinSize: CGFloat = w * 0.10
             let birdX = w * 0.28
 
-            // Модификаторы
             let gapHeight = mods.megaGap ? baseGapHeight * 1.7 : baseGapHeight
             let pipeSpeed = mods.slowMo ? basePipeSpeed * 0.45 : basePipeSpeed
 
@@ -689,7 +752,6 @@ struct GameView: View {
                     .shadow(color: .black.opacity(0.25), radius: 3, x: 0, y: 2)
                     .rotationEffect(.degrees(Double(birdVelocity) * 2))
                     .position(x: birdX, y: birdY)
-                    // Аура бессмертия
                     .overlay(
                         Group {
                             if mods.godMode {
@@ -702,7 +764,6 @@ struct GameView: View {
                         }
                     )
 
-                // HUD
                 VStack {
                     Text("\(score)")
                         .font(.system(size: 64, weight: .heavy, design: .rounded))
@@ -730,10 +791,9 @@ struct GameView: View {
                     Spacer()
                 }
 
-                // Верхние угловые кнопки
-                VStack {
-                    HStack {
-                        if !isStarted && !isGameOver {
+                if !isStarted && !isGameOver {
+                    VStack {
+                        HStack {
                             Button(action: onExitToMenu) {
                                 Image(systemName: "house.fill")
                                     .font(.system(size: 18, weight: .bold))
@@ -742,15 +802,12 @@ struct GameView: View {
                                     .background(Color.black.opacity(0.3))
                                     .clipShape(Circle())
                             }
+                            .padding(.leading, 16)
+                            Spacer()
                         }
+                        .padding(.top, safeTop + 24)
                         Spacer()
-                        if !isGameOver {
-                            ModButton { isModOpen = true }
-                        }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, safeTop + 24)
-                    Spacer()
                 }
 
                 if !isStarted && !isGameOver { startOverlay }
@@ -889,7 +946,6 @@ struct GameView: View {
         birdVelocity += gravity
         birdY += birdVelocity
 
-        // Автопилот
         if mods.autoPlay {
             let nextPipe = pipes.first(where: { $0.x + pipeWidth / 2 > birdX })
             let targetY = nextPipe?.gapY ?? (screenH * 0.45)
@@ -898,7 +954,6 @@ struct GameView: View {
             }
         }
 
-        // Земля
         if birdY > screenH - groundHeight - safeBottom - birdSize / 2 {
             if mods.godMode {
                 birdY = screenH - groundHeight - safeBottom - birdSize / 2
@@ -908,7 +963,6 @@ struct GameView: View {
             }
         }
 
-        // Потолок
         if birdY < safeTop + birdSize / 2 {
             birdY = safeTop + birdSize / 2
             birdVelocity = 0
@@ -936,7 +990,6 @@ struct GameView: View {
             }
         }
 
-        // Спавн труб
         let needSpawn = pipes.isEmpty || pipes.last!.x < screenW - pipeSpacing
         if needSpawn {
             let minY = safeTop + gapHeight / 2 + 50
@@ -946,7 +999,6 @@ struct GameView: View {
                 pipes.append(Pipe(x: screenW + pipeWidth, gapY: gapY, gapHeight: gapHeight))
                 coins.append(Coin(x: screenW + pipeWidth, y: gapY))
 
-                // Дождь из монет
                 if mods.coinRain {
                     let topLimit = safeTop + 60
                     let bottomLimit = screenH - groundHeight - safeBottom - 60
@@ -961,7 +1013,6 @@ struct GameView: View {
             }
         }
 
-        // Столкновение с трубами
         if !mods.godMode {
             for pipe in pipes {
                 let dx = abs(birdX - pipe.x)
